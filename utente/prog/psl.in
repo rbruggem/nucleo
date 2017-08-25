@@ -1,0 +1,69 @@
+#include <sys.h>
+#include <lib.h>
+
+process interruttore body pint(1), 5, LIV_UTENTE;
+process sonno1 body ps1(2), 10, LIV_UTENTE;
+process sonno2 body ps2(3), 10, LIV_UTENTE;
+process sonno3 body ps3(4), 10, LIV_UTENTE;
+
+semaphore sync value 0;
+semaphore sync2 value 0;
+
+extern short sonno1;
+extern short sonno2;
+extern short sonno3;
+
+process_body pint(int a)
+{
+	printf(a, "proc=%d\n", getid());
+	printf(a, "INTERRUTTORE\n");
+	interrupt(sonno3);
+	printf(a,"Interrotto processo %d\n", sonno3);
+	sem_signal(sync);
+
+	sem_wait(sync2);
+	delay(120);
+	interrupt(sonno2);
+	printf(a,"Interrotto processo %d\n", sonno2);
+
+	delay(100);
+	interrupt(sonno1);
+	printf(a,"Interrotto processo %d\n", sonno1);
+	printf(a, "Fine\n");
+}
+
+process_body ps1(int a)
+{
+	printf(a, "proc=%d\n", getid());
+	printf(a, "Se interrotto termina,\n");
+	printf(a, "altrimenti prosegue altri 2.5 secondi\n");
+	while (!isinterrupted())
+	{
+		printf(a, "Delay 2.5 sec\n");
+		delay(50);
+	}
+	printf(a, "Fine\n");
+}
+
+process_body ps2(int a)
+{
+	printf(a, "proc=%d\n", getid());
+	printf(a, "Interrotto durante il sonno\n");
+	printf(a, "Sleep 10 sec\n");
+	sem_signal(sync2);
+	sleep(10000);
+	printf(a, "Fine\n");
+}
+
+process_body ps3(int a)
+{
+	printf(a, "proc=%d\n", getid());
+	printf(a, "Interrotto prima del sonno\n");
+	sem_wait(sync);
+	if (isinterrupted())
+		printf(a, "Sono stato interrotto prima del sonno\n");
+	else
+		printf(a, "Non sono stato interrotto prrima del sonno\n");
+	sleep(60000);
+	printf(a, "Fine\n");
+}

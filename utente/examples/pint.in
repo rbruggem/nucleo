@@ -1,0 +1,17 @@
+/*
+ * Programma I
+ * Test di interrupt */
+
+#include <sys.h>
+#include <lib.h>
+
+/*
+ * Processi che eseguono pi
+ */
+process proc_pi_2 body pint(2), 10, LIV_UTENTE;
+
+
+process_body pint(int a)
+{
+	printf(a, "Programma pi (Processo sul terminale %d)\n", a);
+}

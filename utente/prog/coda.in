@@ -1,0 +1,116 @@
+#include <sys.h>
+#include <lib.h>
+
+
+process controllore body controlla(5), 10, LIV_UTENTE;
+process in1 body inserisci(6), 10, LIV_UTENTE;
+process in2 body inserisci(7), 10, LIV_UTENTE;
+process es1 body estrai(8), 10, LIV_UTENTE;
+
+extern short int in1;
+extern short int in2;
+extern short int es1;
+extern short int controllore;
+
+
+
+struct Informazione {
+	int a;
+};
+
+struct elem {
+	Informazione inf;
+	elem* pun;
+};
+
+class Coda: public Object {
+	int num;
+	elem* testa;
+	elem* fondo;
+
+	public:
+	Coda () : Object() {testa = fondo = 0; num = 0;}
+	void inscoda (Informazione);
+	Informazione estcoda();
+	void stampacoda(int);
+};
+		
+void Coda::inscoda(Informazione og){
+	synchronized_begin();
+	while (num == 10) wait();
+	elem* p = (elem*)mem_alloc(sizeof(elem));
+	num++;
+	p->inf = og;
+	p->pun = 0;
+	if (testa == 0) {testa=p; fondo=p;}
+	else {fondo->pun = p; fondo = p;}
+	notifyall();
+	synchronized_end();
+}
+
+Informazione Coda::estcoda() {
+	synchronized_begin();
+	Informazione og;
+	while (num == 0) wait();
+	og = testa->inf;
+	testa=testa->pun;
+	num--;
+	if (testa == 0) fondo=0;
+	notifyall();
+	synchronized_end();
+	return og;
+}
+
+void Coda::stampacoda(int terminale){
+	synchronized_begin();
+	printf(terminale, "Numero elementi: %d\n", num);
+	elem* p = testa;
+	for (int i=0; i<num; i++){
+		printf(terminale, "Coda elemento %d: %d\n", i+1, p->inf.a);
+		p = p-> pun;
+	}
+	synchronized_end();
+}
+
+
+int n=1;
+int conta=1;
+object Coda q;
+
+process_body inserisci(int a) {
+	printf(a, "proc=%d\n", getid());
+	Informazione og;
+	while(!isinterrupted()) {
+		og.a=n++;
+		q.inscoda(og);
+		printf(a, "%d Inserimento %d\n", conta++, og.a);
+		delay(60);
+	}
+	printf(a, "Fine\n");
+}
+
+process_body estrai(int a) {
+	printf(a, "proc=%d\n", getid());
+	Informazione og;
+	while(!isinterrupted()) {
+		og=q.estcoda();
+		printf(a, "%d Estratto: %d\n", conta++, og.a);
+		delay(60);
+	}
+	printf(a, "Fine\n");
+}
+
+process_body controlla(int a){
+	char c;
+	printf(a, "proc=%d\n", getid());
+	delay(300);
+	interrupt(in1);
+	interrupt(es1);
+	q.stampacoda(a);
+	printf(a,"Premi un tasto per interrompere\n");
+	readvterm_ln(a, &c, 1);
+	interrupt(in2);
+	q.stampacoda(a);
+	printf(a, "Fine\n");
+}
+		
